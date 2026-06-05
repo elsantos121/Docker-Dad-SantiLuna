@@ -1,0 +1,54 @@
+services:
+  mariadb:
+    image: mariadb:10.5
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: docker_sample
+    volumes:
+      - ./mariadb/data:/var/lib/mysql
+      - ./mariadb/sql/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "3307:3306"
+    networks:
+      - lemp-network
+
+  php7:
+    build: ./docker/php
+    image: ejem07-php-fpm:local
+    volumes:
+      - ./config/php/php.ini:/usr/local/etc/php/conf.d/zz-myapp.ini:ro
+      - ./code/myapp:/var/www/html/myapp
+    depends_on:
+      - mariadb
+    networks:
+      - lemp-network
+
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "8880:80"
+    volumes:
+      - ./config/nginx:/etc/nginx/conf.d:ro
+      - ./code/myapp:/var/www/html/myapp:ro
+      - ./logs:/var/log/nginx
+    depends_on:
+      - php7
+    networks:
+      - lemp-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: root
+      PMA_PASSWORD: password
+    ports:
+      - "8881:80"
+    depends_on:
+      - mariadb
+    networks:
+      - lemp-network
+
+networks:
+  lemp-network:
+    driver: bridge
